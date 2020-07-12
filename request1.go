@@ -54,7 +54,7 @@ func Cach1() {
 
 func Cach2() {
 	fmt.Println("	Cách 2:")
-	wg := new(sync.WaitGroup)
+	wg := &sync.WaitGroup{}
 	log.Print("hello 1")
 	f := func(wg *sync.WaitGroup) {
 		time.Sleep(1 * time.Second)
@@ -74,8 +74,8 @@ func Cach3() {
 	go func() {
 		time.Sleep(1 * time.Second)
 		log.Print("hello 3")
-		<-c1
+		c1 <- 1
 	}()
-	c1 <- 1
+	<-c1
 	log.Println("hello 2")
 }

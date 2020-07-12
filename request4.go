@@ -9,8 +9,8 @@ import (
 )
 
 type Line struct {
-	Line_Number int
-	Data        string
+	LineNumber int
+	Data       string
 }
 
 func Run4() {
@@ -70,13 +70,8 @@ func Run4() {
 	// Giợi ý sử dụng biến `make([]chan bool, n)`
 	fmt.Println("\n	4.")
 	messages := make(chan string, 10)
-	var mutex = &sync.Mutex{}
-	var wg = &sync.WaitGroup{}
-	ks := make([]chan bool, 2)
-	ks[0] = make(chan bool)
-	ks[1] = make(chan bool)
+	wg := &sync.WaitGroup{}
 	file, err := os.Open("./file.txt")
-	var listline []Line
 
 	if err != nil {
 		log.Fatal(err)
@@ -84,38 +79,39 @@ func Run4() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	index := 0
 
-	wg.Add(1)
-	go func() {
-		index := 0
-		mutex.Lock()
-		for scanner.Scan() {
-			index++
-			messages <- scanner.Text()
-			fmt.Println(<-messages)
-			line := Line{index, scanner.Text()}
-			listline = append(listline, line)
-		}
-		mutex.Unlock()
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go Worker(messages, wg, i, &index)
+	}
 
-		wg.Done()
-		ks[0] <- true
-	}()
-
-	go func() {
-		<-ks[0]
-		for i := range listline {
-			fmt.Println("Dòng ", listline[i].Line_Number, " giá trị là: ", listline[i].Data)
-		}
-		ks[1] <- true
-	}()
+	for scanner.Scan() {
+		messages <- scanner.Text()
+	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 
+	close(messages)
 	wg.Wait()
 	fmt.Println("xong")
-	<-ks[1]
-	close(messages)
+}
+
+func Worker(messages <-chan string, wg *sync.WaitGroup, i int, index *int) {
+	for {
+		*index++
+		x := Line{*index, ""}
+		foo, ok := <-messages
+		if !ok {
+			*index--
+			wg.Done()
+			return
+		} else {
+			x.Data = foo
+			println("luồng ", i+1, ":	dòng ", x.LineNumber, " giá trị là: ", x.Data)
+		}
+
+	}
 }
