@@ -69,11 +69,17 @@ func Run4() {
 	// goroutine lại. Viết chương trình đó.
 	// Giợi ý sử dụng biến `make([]chan bool, n)`
 	fmt.Println("\n	4.")
-	messages := make(chan Line, 10)
+	size := 10
+	messages := make(chan Line, size)
 	defer close(messages)
 	file, err := os.Open("./file.txt")
 	defer file.Close()
 	wg := &sync.WaitGroup{}
+	stop := make([]chan bool, 3)
+
+	for i := range stop {
+		stop[i] = make(chan bool)
+	}
 
 	if err != nil {
 		log.Fatal(err)
@@ -82,7 +88,8 @@ func Run4() {
 	scanner := bufio.NewScanner(file)
 
 	for i := 0; i < 3; i++ {
-		go Worker(messages, wg)
+		temp := stop[i]
+		go Worker(messages, wg, temp)
 	}
 
 	index := 0
@@ -99,15 +106,21 @@ func Run4() {
 	}
 
 	wg.Wait()
+	for i := 0; i < 3; i++ {
+		<-stop[i]
+	}
+
 	fmt.Println("xong")
 }
 
-func Worker(messages <-chan Line, wg *sync.WaitGroup) {
+func Worker(messages <-chan Line, wg *sync.WaitGroup, stop chan<- bool) {
 	for {
 		select {
 		case temp := <-messages:
 			fmt.Println("Dòng ", temp.LineNumber, " dữ liệu là: ", temp.Data)
 			wg.Done()
+		case stop <- true:
+			break
 		}
 	}
 }
