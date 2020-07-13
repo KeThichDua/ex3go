@@ -69,49 +69,45 @@ func Run4() {
 	// goroutine lại. Viết chương trình đó.
 	// Giợi ý sử dụng biến `make([]chan bool, n)`
 	fmt.Println("\n	4.")
-	messages := make(chan string, 10)
-	wg := &sync.WaitGroup{}
+	messages := make(chan Line, 10)
+	defer close(messages)
 	file, err := os.Open("./file.txt")
+	defer file.Close()
+	wg := &sync.WaitGroup{}
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	index := 0
 
 	for i := 0; i < 3; i++ {
-		wg.Add(1)
-		go Worker(messages, wg, i, &index)
+		go Worker(messages, wg)
 	}
 
+	index := 0
+	var temp Line
 	for scanner.Scan() {
-		messages <- scanner.Text()
+		wg.Add(1)
+		index++
+		temp = Line{index, scanner.Text()}
+		messages <- temp
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 
-	close(messages)
 	wg.Wait()
 	fmt.Println("xong")
 }
 
-func Worker(messages <-chan string, wg *sync.WaitGroup, i int, index *int) {
+func Worker(messages <-chan Line, wg *sync.WaitGroup) {
 	for {
-		*index++
-		x := Line{*index, ""}
-		foo, ok := <-messages
-		if !ok {
-			*index--
+		select {
+		case temp := <-messages:
+			fmt.Println("Dòng ", temp.LineNumber, " dữ liệu là: ", temp.Data)
 			wg.Done()
-			return
-		} else {
-			x.Data = foo
-			println("luồng ", i+1, ":	dòng ", x.LineNumber, " giá trị là: ", x.Data)
 		}
-
 	}
 }
