@@ -88,8 +88,7 @@ func Run4() {
 	scanner := bufio.NewScanner(file)
 
 	for i := 0; i < 3; i++ {
-		temp := stop[i]
-		go Worker(messages, wg, temp)
+		go Worker(messages, wg, stop[i])
 	}
 
 	index := 0
