@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 )
 
 type Line struct {
@@ -70,24 +71,21 @@ func Run4() {
 	// Giợi ý sử dụng biến `make([]chan bool, n)`
 	fmt.Println("\n	4.")
 	size := 10
+	n := 3
 	messages := make(chan Line, size)
 	defer close(messages)
 	file, err := os.Open("./file.txt")
 	defer file.Close()
 	wg := &sync.WaitGroup{}
 	stop := make([]chan bool, 3)
-
-	for i := range stop {
-		stop[i] = make(chan bool)
-	}
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	scanner := bufio.NewScanner(file)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < n; i++ {
+		stop[i] = make(chan bool)
 		go Worker(messages, wg, stop[i])
 	}
 
@@ -105,20 +103,23 @@ func Run4() {
 	}
 
 	wg.Wait()
-	for i := 0; i < 3; i++ {
-		<-stop[i]
+	for i := 0; i < n; i++ {
+		stop[i] <- true
 	}
 
 	fmt.Println("xong")
+	time.Sleep(3 * time.Second)
+	log.Println()
 }
 
-func Worker(messages <-chan Line, wg *sync.WaitGroup, stop chan<- bool) {
+func Worker(messages <-chan Line, wg *sync.WaitGroup, stop chan bool) {
 	for {
 		select {
 		case temp := <-messages:
 			fmt.Println("Dòng ", temp.LineNumber, " dữ liệu là: ", temp.Data)
 			wg.Done()
-		case stop <- true:
+		case <-stop:
+			log.Println("Đã xóa worker")
 			break
 		}
 	}
